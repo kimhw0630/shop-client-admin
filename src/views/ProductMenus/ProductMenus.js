@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import _ from 'lodash';
 import {
   Table, Modal, ModalBody, ModalFooter, ModalHeader,
   Badge,
@@ -28,62 +29,228 @@ import {
 
 import * as APIHandler from '../../utils/APIHandler';
 
-// import usersData from './UsersData'
 
 class ProductMenus extends Component {
 
 constructor(props) {
     super(props);
     this.state = {
-      bShowAddEditDialog: false,
-      bShowConfirmDeleteDialog: false,
-      aProductMenus: [],
-      sSelectedProductMenuName: "",
-      sSelectedProductMenuId: 0,
-      bEditMode: false
+      aProductMenus: [], // list of Product Menus
+      aCategorys: [],     // All list of Categories
+      aSubCategorys: [],  // All list of Sub Categories
+      
+      aFilteredCategorys: [],  // filter categories by same product menu
+      aFilteredSubCategorys:[], // filter sub categories by same category 
+
+      bShowAddEditProductMenuDialog: false,  //toggle for Add/Edit product menu dialog
+      bShowAddEditCategoryDialog: false,    //toggle for Add/Edit Category dialog
+      bShowAddEditSubCategoryDialog: false, //toggle for Add/Edit SubCategory dialog
+      bShowConfirmDeleteDialog: false,    //toggle for show delete confirm dialog
+
+      tblSelectedProductMenuId: -1,
+      tblSelectedCategory: -1,
+      tblSelectedSubCategory: -1,
+
+      bEditMode: false,
+      oSelectedProductMenu: {
+        productMenuId: -1,
+        productMenuName: "",
+        sortOrder: 9999
+      },
+      oSelectedCategory: {
+        categoryId: -1,
+        categoryName: "",
+        productMenuId: 0,
+        sortOrder: 9999
+      },
+      oSelectedSubCategory: {
+        subCategoryId: -1,
+        subCategoryName: "",
+        productMenuId: 0,
+        categoryId: 0,
+        sortOrder: 9999
+      },
+      oSelectedDeleteItem: {
+        type: "", // productMenu: PRODUCTMENU, category: CATEGORY, subCategory: SUBCATEGORY
+        id: -1
+      }
+
     };
-    this.openAddDialog = this.openAddDialog.bind(this);
-    this.handleRowClick = this.handleRowClick.bind(this);
-    this.toggleAddEditDialog = this.toggleAddEditDialog.bind(this);
-    this.saveItem = this.saveItem.bind(this);
-    this.handleChangeSelectedProductMenuName = this.handleChangeSelectedProductMenuName.bind(this);
+    this.openAddDialogForProductMenu = this.openAddDialogForProductMenu.bind(this);
+    this.openAddDialogForCategory = this.openAddDialogForCategory.bind(this);
+    this.openAddDialogForSubCategory = this.openAddDialogForSubCategory.bind(this);
+
+    this.openEditdilaogForProductMenu = this.openEditdilaogForProductMenu.bind(this);
+    this.openEditdilaogForCategory = this.openEditdilaogForCategory.bind(this);
+    this.openEditdilaogForSubCategory = this.openEditdilaogForSubCategory.bind(this);
+
+    this.toggleAddEditProductMenuDialog = this.toggleAddEditProductMenuDialog.bind(this);
+    this.toggleAddEditCategoryDialog = this.toggleAddEditCategoryDialog.bind(this);
+    this.toggleAddEditSubCategoryDialog = this.toggleAddEditSubCategoryDialog.bind(this);
+
+    this.onSaveProductMenu = this.onSaveProductMenu.bind(this);
+    this.onSaveCategory = this.onSaveCategory.bind(this);
+    this.onSaveSubCategory = this.onSaveSubCategory.bind(this);
+
+    this.handleChangeTextField = this.handleChangeTextField.bind(this);
+
     this.getItems = this.getItems.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
-    this.deleteItem = this.deleteItem.bind(this);
+    this.onDeleteConfirmItem = this.onDeleteConfirmItem.bind(this);
+
     this.toggleDeleteConfirmDialog = this.toggleDeleteConfirmDialog.bind(this);
-    this.onSuccessGetProductMenus = this.onSuccessGetProductMenus.bind(this);
-    this.onSuccessSaveItem = this.onSuccessSaveItem.bind(this);
+    
+    this.onSuccessSaveProductMenu = this.onSuccessSaveProductMenu.bind(this);
+    this.onSuccessSaveCategory = this.onSuccessSaveCategory.bind(this);
+    this.onSuccessSaveSubCategory = this.onSuccessSaveSubCategory.bind(this);
+
     this.onSuccessDeleteItem = this.onSuccessDeleteItem.bind(this);
+
+    this.renderProductMenuTableRow = this.renderProductMenuTableRow.bind(this);
+    this.renderCategoryTableRow = this.renderCategoryTableRow.bind(this);
+    this.renderSubCategoryTableRow = this.renderSubCategoryTableRow.bind(this);
+
+    this.onSuccessGetProductMenus = this.onSuccessGetProductMenus.bind(this);
+    this.onSuccessGetAllCategorys = this.onSuccessGetAllCategorys.bind(this);
+    this.onSuccessGetAllSubCategorys = this.onSuccessGetAllSubCategorys.bind(this);
+
+    this.onClickProductMenuRow = this.onClickProductMenuRow.bind(this);
+    this.onClickCategoryRow = this.onClickCategoryRow.bind(this);
+    this.onClickSubCategoryRow = this.onClickSubCategoryRow.bind(this);
+
+    this.getEmptyProductMenu = this.getEmptyProductMenu.bind(this);
+    this.getEmptyCategory = this.getEmptyCategory.bind(this);
+    this.getEmptySubCategory = this.getEmptySubCategory.bind(this);
+
   }
   componentDidMount() {
     this.getItems();
+    this.getCategorys();
+    this.getSubCategorys();
   }
   getItems() {
-      APIHandler.getProductMenus(this.onSuccessGetProductMenus)
+      APIHandler.getProductMenus(this.onSuccessGetProductMenus);
   }
-  onSuccessGetProductMenus(aProductMenus) {
-    if (aProductMenus) {
-      this.setState({aProductMenus:  aProductMenus});
+  getCategorys() {
+    APIHandler.getAllCategorys(this.onSuccessGetAllCategorys);
+  }
+  getSubCategorys() {
+    APIHandler.getAllSubCategorys(this.onSuccessGetAllSubCategorys);
+  }
+  onSuccessGetProductMenus(aData) {
+    if (aData) {
+      this.setState({aProductMenus:  aData});
     } else {
        this.setState({aProductMenus:  []});
     }
   }
-  saveItem() {
-    const oData = {
-      productMenuName: this.state.sSelectedProductMenuName,
-      productMenuId : this.state.sSelectedProductMenuId
+  onSuccessGetAllCategorys(aData) {
+    if (aData) {
+      this.setState({aCategorys:  aData});
+    } else {
+       this.setState({aCategorys:  []});
     }
-    APIHandler.saveProductMenus(oData, this.onSuccessSaveItem);
-    
-    this.toggleAddEditDialog();
   }
-  onSuccessSaveItem(oData) {
-    this.getItems();
+  onSuccessGetAllSubCategorys(aData) {
+    if (aData) {
+      this.setState({aSubCategorys:  aData});
+    } else {
+       this.setState({aSubCategorys:  []});
+    }
+  }
+  onSaveProductMenu() {
+    APIHandler.saveProductMenu(this.state.oSelectedProductMenu, this.onSuccessSaveProductMenu);
+    this.toggleAddEditProductMenuDialog();
+  }
+  onSaveCategory() {
+    APIHandler.saveCategory(this.state.oSelectedCategory, this.onSuccessSaveCategory);
+    this.toggleAddEditCategoryDialog();
+  }
+  onSaveSubCategory() {
+    APIHandler.saveSubCategory(this.state.oSelectedSubCategory, this.onSuccessSaveSubCategory);
+    this.toggleAddEditSubCategoryDialog();
+  }
+  onSuccessSaveSubCategory(oData) {
+    if (oData) {
+      let aSubCategorys = Object.assign([], this.state.aSubCategorys);    //creating copy of object
+      let aFilteredSubCategorys = Object.assign([], this.state.aFilteredSubCategorys);    //creating copy of object
+      if (oData.isNew) {
+        aSubCategorys.push(oData);
+        aFilteredSubCategorys.push(oData);
+      } else {
+        for(let i = 0; i < aSubCategorys.length; i++) {
+          if (aSubCategorys[i].subCategoryId === oData.subCategoryId) {
+            aSubCategorys[i] = oData;
+            break;
+          }
+        }
+        for(let i = 0; i < aFilteredSubCategorys.length; i++) {
+          if (aFilteredSubCategorys[i].subCategoryId === oData.subCategoryId) {
+            aFilteredSubCategorys[i] = oData;
+            break;
+          }
+        }
+      }
+      aSubCategorys.sort((a, b) => a.sortOrder - b.sortOrder);
+      aFilteredSubCategorys.sort((a, b) => a.sortOrder - b.sortOrder);
+      this.setState({
+        aSubCategorys: aSubCategorys,
+        aFilteredSubCategorys: aFilteredSubCategorys
+      });
+    }
+  }
+  onSuccessSaveCategory(oData) {
+    if (oData) {
+      let aCategorys = Object.assign([], this.state.aCategorys);    //creating copy of object
+      let aFilteredCategorys = Object.assign([], this.state.aFilteredCategorys);    //creating copy of object
+      if (oData.isNew) {
+        aCategorys.push(oData);
+        aFilteredCategorys.push(oData);
+      } else {
+        for(let i = 0; i < aCategorys.length; i++) {
+          if (aCategorys[i].categoryId === oData.categoryId) {
+            aCategorys[i] = oData;
+            break;
+          }
+        }
+        for(let i = 0; i < aFilteredCategorys.length; i++) {
+          if (aFilteredCategorys[i].categoryId === oData.categoryId) {
+            aFilteredCategorys[i] = oData;
+            break;
+          }
+        }
+      }
+      aCategorys.sort((a, b) => a.sortOrder - b.sortOrder);
+      aFilteredCategorys.sort((a, b) => a.sortOrder - b.sortOrder);
+      this.setState({
+        aCategorys: aCategorys,
+        aFilteredCategorys: aFilteredCategorys
+      });
+    }
+  }
+  onSuccessSaveProductMenu(oData) {
+    if (oData) {
+      let aProductMenus = Object.assign([], this.state.aProductMenus);    //creating copy of object
+      if (oData.isNew) {
+        aProductMenus.push(oData);
+      } else {
+        for(let i = 0; i < aProductMenus.length; i++) {
+          if (aProductMenus[i].productMenuId === oData.productMenuId) {
+            aProductMenus[i] = oData;
+            break;
+          }
+        }
+      }
+      aProductMenus = aProductMenus.sort((a, b) => a.sortOrder - b.sortOrder);
+      this.setState({aProductMenus: aProductMenus});
+    }
   }
   onDeleteItem(oEvent) {
-    const sItemId = oEvent.target.getAttribute("data-id");
+    let oSelectedDeleteItem = Object.assign({}, this.state.oSelectedDeleteItem);    //creating copy of object
+    oSelectedDeleteItem.id = oEvent.target.getAttribute("data-id");
+    oSelectedDeleteItem.type = oEvent.target.getAttribute("data-type");
     this.setState({
-      sSelectedProductMenuId: sItemId
+      oSelectedDeleteItem: oSelectedDeleteItem
     });
     this.toggleDeleteConfirmDialog();
   }
@@ -92,96 +259,372 @@ constructor(props) {
       bShowConfirmDeleteDialog: !this.state.bShowConfirmDeleteDialog,
     });
   }
-  deleteItem() {
-    const sId = this.state.sSelectedProductMenuId;
-    APIHandler.deleteProductMenu(sId, this.onSuccessDeleteItem);
+  onDeleteConfirmItem() {
+    if (this.state.oSelectedDeleteItem.type === "PRODUCTMENU") {
+      APIHandler.deleteProductMenu(this.state.oSelectedDeleteItem.id, this.onSuccessDeleteItem);
+    } else if (this.state.oSelectedDeleteItem.type === "CATEGORY") {
+      APIHandler.deleteCategory(this.state.oSelectedDeleteItem.id, this.onSuccessDeleteItem);
+    } else if (this.state.oSelectedDeleteItem.type === "SUBCATEGORY") {
+      APIHandler.deleteSubCategory(this.state.oSelectedDeleteItem.id, this.onSuccessDeleteItem);
+    }
     this.toggleDeleteConfirmDialog();
   }
-  onSuccessDeleteItem() {
-    // we should delete from the State not call items..
-    this.getItems();
+  onSuccessDeleteItem(oData) {
+    if (oData.deletedType === "PRODUCTMENU") {
+      const aProductMenus =_.filter(this.state.aProductMenus, (o) =>  o.productMenuId !== oData.deletedId);
+      this.setState({aProductMenus: aProductMenus});
+
+    } else if (oData.deletedType === "CATEGORY") {
+      const aCategorys =_.filter(this.state.aCategorys, (o) =>  o.categoryId !== oData.deletedId);
+      const aFilteredCategorys = _.filter(this.state.aFilteredCategorys, (o) =>  o.categoryId !== oData.deletedId);
+      this.setState(
+        {
+          aCategorys: aCategorys,
+          aFilteredCategorys: aFilteredCategorys,
+        }
+      );
+
+    } else if (oData.deletedType === "SUBCATEGORY") {
+      const aSubCategorys =_.filter(this.state.aSubCategorys, (o) =>  o.subCategoryId !== oData.deletedId);
+      const aFilteredSubCategorys = _.filter(this.state.aFilteredSubCategorys, (o) =>  o.subCategoryId !== oData.deletedId);
+      this.setState(
+        {
+          aSubCategorys: aSubCategorys,
+          aFilteredSubCategorys: aFilteredSubCategorys,
+        }
+      );
+    }
   }
-  toggleAddEditDialog() {
+
+  toggleAddEditProductMenuDialog() {
     this.setState({
-      bShowAddEditDialog: !this.state.bShowAddEditDialog,
+      bShowAddEditProductMenuDialog: !this.state.bShowAddEditProductMenuDialog,
     });
   }
-  handleChangeSelectedProductMenuName(oEvent) {
-    this.setState({sSelectedProductMenuName: oEvent.target.value});
-  }
-  handleRowClick(oItem) {
+  toggleAddEditCategoryDialog() {
     this.setState({
-      sSelectedProductMenuName: oItem.productMenuName,
-      sSelectedProductMenuId: oItem.productMenuId,
+      bShowAddEditCategoryDialog: !this.state.bShowAddEditCategoryDialog,
+    });
+  }
+  toggleAddEditSubCategoryDialog() {
+    this.setState({
+      bShowAddEditSubCategoryDialog: !this.state.bShowAddEditSubCategoryDialog,
+    });
+  }
+  handleChangeTextField(oEvent) {
+    const sFields =  oEvent.target.getAttribute("data-field");  // data-field e,g, oSelectedProductMenu.sortOrder
+    const aFields = sFields.split(".");
+    let oSelectedItem = Object.assign({}, this.state[aFields[0]]);    //creating copy of object
+    oSelectedItem[aFields[1]] = oEvent.target.value;
+    this.setState({[aFields[0]] : oSelectedItem});
+  }
+  getEmptyProductMenu() {
+    let oItem = {};
+    oItem.productMenuId = -1;
+    oItem.productMenuName = "";
+    oItem.sortOrder = 9999;
+    return oItem;
+  }
+  getEmptyCategory(productMenuId) {
+    let oItem = {};
+    oItem.categoryId = -1;
+    oItem.categoryName = "";
+    oItem.productMenuId = productMenuId;
+    oItem.sortOrder = 9999;
+    return oItem;
+  }
+  getEmptySubCategory(productMenuId, categoryId) {
+    let oItem = {};
+    oItem.subCategoryId = -1;
+    oItem.subCategoryName = "";
+    oItem.productMenuId = productMenuId;
+    oItem.categoryId = categoryId;
+    oItem.sortOrder = 9999;
+    return oItem;
+  }
+  openEditdilaogForProductMenu(oItem) {
+    this.setState({
+      oSelectedProductMenu: oItem,
       bEditMode: true
     });
-    this.toggleAddEditDialog();
+    this.toggleAddEditProductMenuDialog();
   }
-  openAddDialog() {
+  openEditdilaogForCategory(oItem) {
     this.setState({
-      sSelectedProductMenuName: "",
-      sSelectedProductMenuId: 0,
+      oSelectedCategory: oItem,
+      bEditMode: true
+    });
+    this.toggleAddEditCategoryDialog();
+  }
+  openEditdilaogForSubCategory(oItem) {
+    this.setState({
+      oSelectedSubCategory: oItem,
+      bEditMode: true
+    });
+    this.toggleAddEditSubCategoryDialog();
+  }
+
+  openAddDialogForProductMenu() {
+    // let oSelectedItem = Object.assign({}, this.state.oSelectedProductMenu);    //creating copy of object
+    this.setState({
+      oSelectedProductMenu: this.getEmptyProductMenu(),
       bEditMode: false
     });
-    this.toggleAddEditDialog();
+    this.toggleAddEditProductMenuDialog();
   }
-  renderTableRow(oItem) {
-        // e.g pass parameter 
-        const clickCallback = () => this.handleRowClick(oItem);
-        return (
-          <tr key={"row-data-" + oItem.productMenuId}>
-              {/*<td>{oItem.productMenuId}</td>*/}
-              <td>{oItem.productMenuName}</td>	
-              <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
-              <td  width="100px"><button className="btn btn-ghost-danger btn-sm" data-id={oItem.productMenuId} onClick={this.onDeleteItem} >Delete</button></td>
-              
-          </tr>
+  openAddDialogForCategory() {
+    if (this.state.oSelectedProductMenu.productMenuId > -1) {
+      this.setState({
+        oSelectedCategory: this.getEmptyCategory(this.state.oSelectedProductMenu.productMenuId),
+        bEditMode: false
+      });
+      this.toggleAddEditCategoryDialog();
+    }
+  }
+  openAddDialogForSubCategory() {
+    if (this.state.oSelectedProductMenu.productMenuId > -1 && this.state.oSelectedCategory.categoryId > -1 ) {
+      this.setState({
+        oSelectedSubCategory: this.getEmptySubCategory(this.state.oSelectedProductMenu.productMenuId, this.state.oSelectedCategory.categoryId),
+        bEditMode: false
+      });
+      this.toggleAddEditSubCategoryDialog();
+    }
+  }
+  onClickProductMenuRow(oItem) {
+    if (this.state.oSelectedProductMenu.productMenuId !== oItem.productMenuId) {
+      const aFilteredCategorys = _.filter(this.state.aCategorys, { productMenuId: oItem.productMenuId });
+      this.setState({
+        oSelectedProductMenu: oItem,
+        oSelectedCategory: this.getEmptyCategory(oItem.productMenuId),
+        aFilteredCategorys: []
+      });
+      // if we don't put timeout it add up items in category table
+     setTimeout(
+          function() {
+              this.setState({
+                aFilteredCategorys: aFilteredCategorys,
+                aFilteredSubCategorys: []
+              });
+          }.bind(this), 50
         );
     }
+  }
+  onClickCategoryRow(oItem) {
+    if (this.state.oSelectedCategory.categoryId !== oItem.categoryId) {
+      this.setState({oSelectedCategory: oItem});
+      const aFilteredSubCategorys = _.filter(this.state.aSubCategorys, { categoryId: oItem.categoryId });
+      this.setState({
+        oSelectedCategory: oItem,
+        aFilteredSubCategorys: []
+      });
+      setTimeout(
+          function() {
+              this.setState({
+                aFilteredSubCategorys: aFilteredSubCategorys
+              });
+          }.bind(this), 50
+        );
+    }
+    
+  }
+  onClickSubCategoryRow(oItem) {
+    this.setState({oSelectedSubCategory: oItem});
+  }
+  renderProductMenuTableRow(oItem) {
+    // e.g pass parameter 
+    const clickCallback = () => this.openEditdilaogForProductMenu(oItem);
+    const clickRow = () => this.onClickProductMenuRow(oItem);
+    return (
+      <tr key={"row-data-menu-" + oItem.productMenuId} onClick={clickRow} className={this.state.oSelectedProductMenu.productMenuId === oItem.productMenuId? 'selected': null}>
+          <td>{oItem.productMenuName}</td>	
+          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
+          <td width="100px">
+            <button className="btn btn-ghost-danger btn-sm" 
+              data-id={oItem.productMenuId}
+              data-type="PRODUCTMENU"
+              onClick={this.onDeleteItem} >Delete</button>
+            </td>
+      </tr>
+    );
+  }
+  renderCategoryTableRow(oItem) {
+    // e.g pass parameter 
+    const clickRow = () => this.onClickCategoryRow(oItem);
+    const clickCallback = () => this.openEditdilaogForCategory(oItem);
+    return (
+      <tr key={"row-data-category-" + oItem.productMenuId + "-" + oItem.categoryId} onClick={clickRow} className={this.state.oSelectedCategory.categoryId === oItem.categoryId? 'selected': null}>
+          <td>{oItem.categoryName}</td>	
+          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
+          <td width="100px">
+            <button className="btn btn-ghost-danger btn-sm" data-id={oItem.categoryId} 
+              data-type="CATEGORY"
+              onClick={this.onDeleteItem} >Delete</button>
+          </td>
+      </tr>
+    );
+  }
+  renderSubCategoryTableRow(oItem) {
+    // e.g pass parameter 
+    const clickRow = () => this.onClickSubCategoryRow(oItem);
+    const clickCallback = () => this.openEditdilaogForSubCategory(oItem);
+    return (
+      <tr key={"row-data-subcategory-" + oItem.productMenuId + "-" + oItem.categoryId + "-" + oItem.subCategoryId} onClick={clickRow} className={this.state.oSelectedSubCategory.subCategoryId === oItem.subCategoryId? 'selected': null}>
+          <td>{oItem.subCategoryName}</td>	
+          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
+          <td width="100px"><button className="btn btn-ghost-danger btn-sm" data-id={oItem.subCategoryId} data-type="SUBCATEGORY" onClick={this.onDeleteItem} >Delete</button></td>
+      </tr>
+    );
+  }
   render() {
     // generating rows
-    let aTableRows = [];
+    let aProductMenuTableRows = [];
     this.state.aProductMenus.forEach(oItem => {
-        aTableRows.push(this.renderTableRow(oItem));
+        aProductMenuTableRows.push(this.renderProductMenuTableRow(oItem));
     });
+   
+    let aCategoryTableRows = [];
+    this.state.aFilteredCategorys.forEach(oItem => {
+        aCategoryTableRows.push(this.renderCategoryTableRow(oItem));
+    });
+
+    let aSubCategoryTableRows = [];
+    this.state.aFilteredSubCategorys.forEach(oItem => {
+        aSubCategoryTableRows.push(this.renderSubCategoryTableRow(oItem));
+    });
+
     return (
       <div className="animated fadeIn">
         <Row>
-          <Col lg={8}>
+          <Col lg={4}>
             <Card>
               <CardHeader>
-                <strong><i className="icon-info pr-1"></i>Product Menus</strong>
+                <strong><i className="icon-info pr-1"></i>Product Menus ({aProductMenuTableRows.length})</strong>
                  <div className="card-header-actions">
-                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialog}>Add</button>
+                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialogForProductMenu}>Add</button>
                 </div>
               </CardHeader>
               <CardBody>
-                  <Table responsive striped hover>
-                    <tbody>{aTableRows}</tbody>
+                  <Table responsive hover key="tblProductMenu">
+                    <tbody>{aProductMenuTableRows}</tbody>
+                  </Table>
+              </CardBody>
+            </Card>
+          </Col>
+          <Col lg={4}>
+            <Card>
+              <CardHeader>
+                <strong><i className="icon-info pr-1"></i>Category ({aCategoryTableRows.length})</strong>
+                 <div className="card-header-actions">
+                    <button className="btn btn-ghost-primary btn-sm" 
+                      disabled={this.state.oSelectedProductMenu.productMenuId < 0  ? true : false}
+                      onClick={this.openAddDialogForCategory}>Add</button>
+                </div>
+              </CardHeader>
+              <CardBody>
+                  <Table responsive hover key="tblCategory">
+                    <tbody>
+                      {aCategoryTableRows}
+                    </tbody>
+                  </Table>
+              </CardBody>
+            </Card>
+          </Col>
+          <Col lg={4}>
+            <Card>
+              <CardHeader>
+                <strong><i className="icon-info pr-1"></i>Sub Category ({aSubCategoryTableRows.length})</strong>
+                 <div className="card-header-actions">
+                    <button className="btn btn-ghost-primary btn-sm" 
+                       disabled={(this.state.oSelectedProductMenu.productMenuId < 0 ||  this.state.oSelectedCategory.categoryId < 0) ? true : false}
+                      onClick={this.openAddDialogForSubCategory}>Add</button>
+                </div>
+              </CardHeader>
+              <CardBody>
+                  <Table responsive hover key="tblSubCategory">
+                    <tbody>{aSubCategoryTableRows}</tbody>
                   </Table>
               </CardBody>
             </Card>
           </Col>
         </Row>
-
-        <Modal isOpen={this.state.bShowAddEditDialog} toggle={this.toggleAddEditDialog}
+        {/* Dialog for Product Menu */}
+        <Modal isOpen={this.state.bShowAddEditProductMenuDialog} toggle={this.toggleAddEditProductMenuDialog}
               className={'modal-primary ' + this.props.className}>
-          <ModalHeader toggle={this.toggleAddEditDialog}>Add/Edit</ModalHeader>
+          <ModalHeader toggle={this.toggleAddEditProductMenuDialog}>Add/Edit</ModalHeader>
           <ModalBody>
             <Row>
                 <Col xs="12">
                   <FormGroup>
-                    <Label htmlFor="name">Product Menu Name</Label>
-                    <Input type="text" id="name" placeholder="Enter product menu name" required  value={this.state.sSelectedProductMenuName} onChange={this.handleChangeSelectedProductMenuName} />
+                    <Label htmlFor="product-name">Product Menu Name</Label>
+                    <Input type="text" id="product-name" placeholder="Enter product menu name" required  data-field="oSelectedProductMenu.productMenuName" value={this.state.oSelectedProductMenu.productMenuName} onChange={this.handleChangeTextField} />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label htmlFor="product-sortorder">Sort Order</Label>
+                    <Input type="number" min="0" max="9999" maxLength="4" id="product-sortorder" placeholder="Sort Order" required data-field="oSelectedProductMenu.sortOrder" value={this.state.oSelectedProductMenu.sortOrder} onChange={this.handleChangeTextField} />
                   </FormGroup>
                 </Col>
               </Row>
           </ModalBody>
           <ModalFooter>
-            <Button color="primary" onClick={this.saveItem}>Ok</Button>{' '}
-            <Button color="secondary" onClick={this.toggleAddEditDialog}>Cancel</Button>
+            <Button color="primary" onClick={this.onSaveProductMenu}>Ok</Button>{' '}
+            <Button color="secondary" onClick={this.toggleAddEditProductMenuDialog}>Cancel</Button>
           </ModalFooter>
       </Modal>
+      {/* Dialog for Category */}
+      <Modal isOpen={this.state.bShowAddEditCategoryDialog} toggle={this.toggleAddEditCategoryDialog}
+              className={'modal-primary ' + this.props.className}>
+          <ModalHeader toggle={this.toggleAddEditCategoryDialog}>Add/Edit</ModalHeader>
+          <ModalBody>
+            <Row>
+                <Col xs="12">
+                  <FormGroup>
+                    <Label htmlFor="category-name">Category Name</Label>
+                    <Input type="text" id="category-name" placeholder="Enter category name" required  
+                      data-field="oSelectedCategory.categoryName" 
+                      value={this.state.oSelectedCategory.categoryName} onChange={this.handleChangeTextField} />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label htmlFor="category-sortOrder">Sort Order</Label>
+                    <Input type="number" min="0" max="9999" maxLength="4" id="category-sortOrder" placeholder="Sort Order" required 
+                      data-field="oSelectedCategory.sortOrder" 
+                      value={this.state.oSelectedCategory.sortOrder} onChange={this.handleChangeTextField} />
+                  </FormGroup>
+                </Col>
+              </Row>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onClick={this.onSaveCategory}>Ok</Button>{' '}
+            <Button color="secondary" onClick={this.toggleAddEditCategoryDialog}>Cancel</Button>
+          </ModalFooter>
+      </Modal>
+       {/* Dialog for Sub Category */}
+      <Modal isOpen={this.state.bShowAddEditSubCategoryDialog} toggle={this.toggleAddEditSubCategoryDialog}
+              className={'modal-primary ' + this.props.className}>
+          <ModalHeader toggle={this.bShowAddEditSubCategoryDialog}>Add/Edit</ModalHeader>
+          <ModalBody>
+            <Row>
+                <Col xs="12">
+                  <FormGroup>
+                    <Label htmlFor="category-name">Sub Category Name</Label>
+                    <Input type="text" id="subcategory-name" placeholder="Enter Sub Category name" required  
+                      data-field="oSelectedSubCategory.subCategoryName" 
+                      value={this.state.oSelectedSubCategory.subCategoryName} onChange={this.handleChangeTextField} />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label htmlFor="subcategory-sortOrder">Sort Order</Label>
+                    <Input type="number" min="0" max="9999" maxLength="4" id="subcategory-sortOrder" placeholder="Sort Order" required 
+                      data-field="oSelectedSubCategory.sortOrder" 
+                      value={this.state.oSelectedSubCategory.sortOrder} onChange={this.handleChangeTextField} />
+                  </FormGroup>
+                </Col>
+              </Row>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onClick={this.onSaveSubCategory}>Ok</Button>{' '}
+            <Button color="secondary" onClick={this.toggleAddEditSubCategoryDialog}>Cancel</Button>
+          </ModalFooter>
+      </Modal>
+
 
       <Modal isOpen={this.state.bShowConfirmDeleteDialog} toggle={this.toggleDeleteConfirmDialog}
               className={'modal-warning ' + this.props.className}>
@@ -196,7 +639,7 @@ constructor(props) {
               </Row>
           </ModalBody>
           <ModalFooter>
-            <Button color="warning" onClick={this.deleteItem}>Ok</Button>{' '}
+            <Button color="warning" onClick={this.onDeleteConfirmItem}>Ok</Button>{' '}
             <Button color="secondary" onClick={this.toggleDeleteConfirmDialog}>Cancel</Button>
           </ModalFooter>
       </Modal>

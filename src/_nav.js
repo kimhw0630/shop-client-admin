@@ -19,16 +19,16 @@ export default {
       class: ''             // optional class names space delimited list for title item ex: "text-center"
     },
     {
-      name: 'Products',
-      url: '/products',
-      icon: 'fa fa-bicycle',
-    },
-    {
       name: 'Product Menus',
       url: '/ProductMenus',
       icon: 'fa fa-list',
     },
     {
+      name: 'Products',
+      url: '/products',
+      icon: 'fa fa-bicycle',
+    },
+    /*{
       name: 'Category',
       url: '/category',
       icon: 'fa fa-list-ul',
@@ -37,7 +37,7 @@ export default {
       name: 'Sub Category',
       url: '/subcategory',
       icon: 'fa fa-list-ol',
-    },
+    },*/
     
     /*{
       name: 'Colors',

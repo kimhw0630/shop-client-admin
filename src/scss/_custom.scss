@@ -1,1 +1,12 @@
 // Here you can add other styles
+table {
+    tr.selected{
+        background-color: #20a8d8!important;
+        color: white!important;
+        td {
+            button.btn-ghost-primary {
+                color: white!important;
+            }
+        }
+    }
+}
