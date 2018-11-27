@@ -1,34 +1,20 @@
 import React, { Component } from 'react';
 import _ from 'lodash';
 import {
-  Table, Modal, ModalBody, ModalFooter, ModalHeader,
-  Badge,
+  Modal, ModalBody, ModalFooter, ModalHeader,
   Button,
-  ButtonDropdown,
   Card,
   CardBody,
-  CardFooter,
   CardHeader,
   Col,
-  Collapse,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
-  Fade,
-  Form,
   FormGroup,
-  FormText,
-  FormFeedback,
   Input,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
   Label,
   Row,
 } from 'reactstrap';
 
 import * as APIHandler from '../../utils/APIHandler';
-
+import TableList from '../TableList/TableList';
 
 class ProductMenus extends Component {
 
@@ -105,10 +91,6 @@ constructor(props) {
     this.onSuccessSaveSubCategory = this.onSuccessSaveSubCategory.bind(this);
 
     this.onSuccessDeleteItem = this.onSuccessDeleteItem.bind(this);
-
-    this.renderProductMenuTableRow = this.renderProductMenuTableRow.bind(this);
-    this.renderCategoryTableRow = this.renderCategoryTableRow.bind(this);
-    this.renderSubCategoryTableRow = this.renderSubCategoryTableRow.bind(this);
 
     this.onSuccessGetProductMenus = this.onSuccessGetProductMenus.bind(this);
     this.onSuccessGetAllCategorys = this.onSuccessGetAllCategorys.bind(this);
@@ -272,7 +254,7 @@ constructor(props) {
   onSuccessDeleteItem(oData) {
     if (oData.deletedType === "PRODUCTMENU") {
       const aProductMenus =_.filter(this.state.aProductMenus, (o) =>  o.productMenuId !== oData.deletedId);
-      this.setState({aProductMenus: aProductMenus});
+      this.setState({aProductMenus: aProductMenus, oSelectedProductMenu: this.getEmptyProductMenu()});
 
     } else if (oData.deletedType === "CATEGORY") {
       const aCategorys =_.filter(this.state.aCategorys, (o) =>  o.categoryId !== oData.deletedId);
@@ -281,6 +263,7 @@ constructor(props) {
         {
           aCategorys: aCategorys,
           aFilteredCategorys: aFilteredCategorys,
+          oSelectedCategory: this.getEmptyCategory(this.state.oSelectedProductMenu.productMenuId)
         }
       );
 
@@ -291,6 +274,7 @@ constructor(props) {
         {
           aSubCategorys: aSubCategorys,
           aFilteredSubCategorys: aFilteredSubCategorys,
+          oSelectedSubCategory: this.getEmptySubCategory(this.state.oSelectedProductMenu.productMenuId, this.state.oSelectedCategory.categoryId)
         }
       );
     }
@@ -396,6 +380,7 @@ constructor(props) {
       this.setState({
         oSelectedProductMenu: oItem,
         oSelectedCategory: this.getEmptyCategory(oItem.productMenuId),
+        oSelectedSubCategory: this.getEmptySubCategory(oItem.productMenuId, -1),
         aFilteredCategorys: []
       });
       // if we don't put timeout it add up items in category table
@@ -405,16 +390,16 @@ constructor(props) {
                 aFilteredCategorys: aFilteredCategorys,
                 aFilteredSubCategorys: []
               });
-          }.bind(this), 50
+          }.bind(this), 100
         );
     }
   }
   onClickCategoryRow(oItem) {
     if (this.state.oSelectedCategory.categoryId !== oItem.categoryId) {
-      this.setState({oSelectedCategory: oItem});
       const aFilteredSubCategorys = _.filter(this.state.aSubCategorys, { categoryId: oItem.categoryId });
       this.setState({
         oSelectedCategory: oItem,
+        oSelectedSubCategory: this.getEmptySubCategory(oItem.productMenuId, -1),
         aFilteredSubCategorys: []
       });
       setTimeout(
@@ -422,7 +407,7 @@ constructor(props) {
               this.setState({
                 aFilteredSubCategorys: aFilteredSubCategorys
               });
-          }.bind(this), 50
+          }.bind(this), 100
         );
     }
     
@@ -430,119 +415,67 @@ constructor(props) {
   onClickSubCategoryRow(oItem) {
     this.setState({oSelectedSubCategory: oItem});
   }
-  renderProductMenuTableRow(oItem) {
-    // e.g pass parameter 
-    const clickCallback = () => this.openEditdilaogForProductMenu(oItem);
-    const clickRow = () => this.onClickProductMenuRow(oItem);
-    return (
-      <tr key={"row-data-menu-" + oItem.productMenuId} onClick={clickRow} className={this.state.oSelectedProductMenu.productMenuId === oItem.productMenuId? 'selected': null}>
-          <td>{oItem.productMenuName}</td>	
-          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
-          <td width="100px">
-            <button className="btn btn-ghost-danger btn-sm" 
-              data-id={oItem.productMenuId}
-              data-type="PRODUCTMENU"
-              onClick={this.onDeleteItem} >Delete</button>
-            </td>
-      </tr>
-    );
-  }
-  renderCategoryTableRow(oItem) {
-    // e.g pass parameter 
-    const clickRow = () => this.onClickCategoryRow(oItem);
-    const clickCallback = () => this.openEditdilaogForCategory(oItem);
-    return (
-      <tr key={"row-data-category-" + oItem.productMenuId + "-" + oItem.categoryId} onClick={clickRow} className={this.state.oSelectedCategory.categoryId === oItem.categoryId? 'selected': null}>
-          <td>{oItem.categoryName}</td>	
-          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
-          <td width="100px">
-            <button className="btn btn-ghost-danger btn-sm" data-id={oItem.categoryId} 
-              data-type="CATEGORY"
-              onClick={this.onDeleteItem} >Delete</button>
-          </td>
-      </tr>
-    );
-  }
-  renderSubCategoryTableRow(oItem) {
-    // e.g pass parameter 
-    const clickRow = () => this.onClickSubCategoryRow(oItem);
-    const clickCallback = () => this.openEditdilaogForSubCategory(oItem);
-    return (
-      <tr key={"row-data-subcategory-" + oItem.productMenuId + "-" + oItem.categoryId + "-" + oItem.subCategoryId} onClick={clickRow} className={this.state.oSelectedSubCategory.subCategoryId === oItem.subCategoryId? 'selected': null}>
-          <td>{oItem.subCategoryName}</td>	
-          <td width="100px"><button className="btn btn-ghost-primary btn-sm" onClick={clickCallback}>Edit</button></td>
-          <td width="100px"><button className="btn btn-ghost-danger btn-sm" data-id={oItem.subCategoryId} data-type="SUBCATEGORY" onClick={this.onDeleteItem} >Delete</button></td>
-      </tr>
-    );
-  }
   render() {
-    // generating rows
-    let aProductMenuTableRows = [];
-    this.state.aProductMenus.forEach(oItem => {
-        aProductMenuTableRows.push(this.renderProductMenuTableRow(oItem));
-    });
-   
-    let aCategoryTableRows = [];
-    this.state.aFilteredCategorys.forEach(oItem => {
-        aCategoryTableRows.push(this.renderCategoryTableRow(oItem));
-    });
-
-    let aSubCategoryTableRows = [];
-    this.state.aFilteredSubCategorys.forEach(oItem => {
-        aSubCategoryTableRows.push(this.renderSubCategoryTableRow(oItem));
-    });
-
     return (
       <div className="animated fadeIn">
         <Row>
           <Col lg={4}>
             <Card>
               <CardHeader>
-                <strong><i className="icon-info pr-1"></i>Product Menus ({aProductMenuTableRows.length})</strong>
+                <strong><i className="icon-info pr-1"></i>Product Menu ({this.state.aProductMenus.length})</strong>
                  <div className="card-header-actions">
-                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialogForProductMenu}>Add</button>
+                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialogForCategory}>Add</button>
                 </div>
               </CardHeader>
               <CardBody>
-                  <Table responsive hover key="tblProductMenu">
-                    <tbody>{aProductMenuTableRows}</tbody>
-                  </Table>
+                <TableList 
+                  itemType="PRODUCTMENU" 
+                  itemList={this.state.aProductMenus}
+                  selectedItemId={this.state.oSelectedProductMenu.productMenuId}
+                  onSelectItem={this.onClickProductMenuRow}
+                  onEditItem={this.openEditdilaogForProductMenu}
+                  deleteItem={this.onDeleteItem}
+                ></TableList>
               </CardBody>
             </Card>
           </Col>
           <Col lg={4}>
             <Card>
               <CardHeader>
-                <strong><i className="icon-info pr-1"></i>Category ({aCategoryTableRows.length})</strong>
+                <strong><i className="icon-info pr-1"></i>Category ({this.state.aFilteredCategorys.length})</strong>
                  <div className="card-header-actions">
-                    <button className="btn btn-ghost-primary btn-sm" 
-                      disabled={this.state.oSelectedProductMenu.productMenuId < 0  ? true : false}
-                      onClick={this.openAddDialogForCategory}>Add</button>
+                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialogForCategory}>Add</button>
                 </div>
               </CardHeader>
               <CardBody>
-                  <Table responsive hover key="tblCategory">
-                    <tbody>
-                      {aCategoryTableRows}
-                    </tbody>
-                  </Table>
+                <TableList 
+                  itemType="CATEGORY" 
+                  itemList={this.state.aFilteredCategorys}
+                  selectedItemId={this.state.oSelectedCategory.categoryId}
+                  onSelectItem={this.onClickCategoryRow}
+                  onEditItem={this.openEditdilaogForCategory}
+                  onDeleteItem={this.onDeleteItem}
+                ></TableList>
               </CardBody>
             </Card>
           </Col>
           <Col lg={4}>
             <Card>
               <CardHeader>
-                <strong><i className="icon-info pr-1"></i>Sub Category ({aSubCategoryTableRows.length})</strong>
+                <strong><i className="icon-info pr-1"></i>Sub Category ({this.state.aFilteredSubCategorys.length})</strong>
                  <div className="card-header-actions">
-                    <button className="btn btn-ghost-primary btn-sm" 
-                       disabled={(this.state.oSelectedProductMenu.productMenuId < 0 ||  this.state.oSelectedCategory.categoryId < 0) ? true : false}
-                      onClick={this.openAddDialogForSubCategory}>Add</button>
+                    <button className="btn btn-ghost-primary btn-sm" onClick={this.openAddDialogForSubCategory}>Add</button>
                 </div>
               </CardHeader>
               <CardBody>
-                  <Table responsive hover key="tblSubCategory">
-                    <tbody>{aSubCategoryTableRows}</tbody>
-                  </Table>
+                <TableList 
+                  itemType="SUBCATEGORY" 
+                  itemList={this.state.aFilteredSubCategorys}
+                  selectedItemId={this.state.oSelectedSubCategory.subCategoryId}
+                  onSelectItem={this.onClickSubCategoryRow}
+                  onEditItem={this.openEditdilaogForSubCategory}
+                  onDeleteItem={this.onDeleteItem}
+                ></TableList>
               </CardBody>
             </Card>
           </Col>

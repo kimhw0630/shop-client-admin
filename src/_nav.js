@@ -19,13 +19,18 @@ export default {
       class: ''             // optional class names space delimited list for title item ex: "text-center"
     },
     {
+      name: 'Products',
+      url: '/products',
+      icon: 'fa fa-bicycle',
+    },
+    {
       name: 'Product Menus',
       url: '/ProductMenus',
       icon: 'fa fa-list',
     },
     {
-      name: 'Products',
-      url: '/products',
+      name: 'Company',
+      url: '/Company',
       icon: 'fa fa-bicycle',
     },
     /*{

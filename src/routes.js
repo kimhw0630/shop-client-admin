@@ -212,7 +212,10 @@ const Customers = Loadable({
   loader: () => import('./views/Customers/Customers'),
   loading: Loading,
 });
-
+const Company = Loadable({
+  loader: () => import('./views/Company/Company'),
+  loading: Loading,
+});
 // https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config
 const routes = [
   { path: '/', exact: true, name: 'Home', component: DefaultLayout },
@@ -220,6 +223,7 @@ const routes = [
   { path: '/theme', exact: true, name: 'Theme', component: Colors },
   { path: '/theme/colors', name: 'Colors', component: Colors },
   { path: '/ProductMenus', name: 'Product Menus', component: ProductMenus },
+  { path: '/Company', name: 'Company', component: Company },
   { path: '/category', name: 'Category', component: Category },
   { path: '/subcategory', name: 'Sub Category', component: SubCategory },
   { path: '/products', name: 'Products', component: Products },
